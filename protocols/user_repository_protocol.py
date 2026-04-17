@@ -1,5 +1,5 @@
 from typing import Protocol
-from models.user import UserToCreate, UserInDb
+from schemas.user_schemas import UserToCreateSchema, UserInDb
 
 class PUserRepository(Protocol):
     def get_user_by_id(self, user_id: int) -> UserInDb | None:
@@ -14,10 +14,10 @@ class PUserRepository(Protocol):
     def get_list_of_users(self) -> list[UserInDb]:
         ...
 
-    def create_user(self, user_data: UserToCreate) -> UserInDb:
+    def create_user(self, user_data: UserToCreateSchema) -> UserInDb:
         ...
 
-    def update_user(self, user_id: int, user_data: UserToCreate) -> UserInDb:
+    def update_user(self, user_id: int, user_data: UserToCreateSchema) -> UserInDb:
         ...
 
     def delete_user(self, user_id: int) -> None:

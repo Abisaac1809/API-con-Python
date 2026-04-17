@@ -2,7 +2,7 @@ import os
 import jwt
 from datetime import datetime, timedelta, timezone
 from pwdlib import PasswordHash
-from models.user import User, UserInDb, UserToCreate
+from schemas.user_schemas import UserToCreateSchema, UserInDb, UserResponse
 from protocols import PUserRepository
 from errors.business_errors import (
     InvalidCredentialsError,
@@ -10,12 +10,11 @@ from errors.business_errors import (
     UserPhoneAlreadyExistsError,
 )
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = os.getenv("SECRET_KEY", "clave-ultra-secreta")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 _pwd_hash = PasswordHash.recommended()
-
 
 class AuthService:
     __user_repository: PUserRepository
@@ -29,10 +28,8 @@ class AuthService:
     def __verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return _pwd_hash.verify(plain_password, hashed_password)
 
-    def __to_public(self, user_in_db: UserInDb) -> User:
-        data = user_in_db.model_dump()
-        data.pop("password")
-        return User(**data)
+    def __to_public(self, user_in_db: UserInDb) -> UserResponse:
+        return UserResponse(**user_in_db.model_dump(exclude={"password"}))
 
     def __ensure_email_is_available(self, email: str) -> None:
         if self.__user_repository.get_user_by_email(email):
@@ -42,12 +39,12 @@ class AuthService:
         if self.__user_repository.get_user_by_phone(phone):
             raise UserPhoneAlreadyExistsError(phone)
 
-    def create_access_token(self, user: User) -> str:
+    def create_access_token(self, user: UserResponse) -> str:
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         payload = {"sub": str(user.id), "exp": expire}
         return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-    def register(self, user_data: UserToCreate) -> User:
+    def register(self, user_data: UserToCreateSchema) -> UserResponse:
         self.__ensure_email_is_available(user_data.email)
         self.__ensure_phone_is_available(user_data.phone)
 
@@ -56,7 +53,7 @@ class AuthService:
         created = self.__user_repository.create_user(user_to_store)
         return self.__to_public(created)
 
-    def login(self, email: str, password: str) -> User:
+    def login(self, email: str, password: str) -> UserResponse:
         user = self.__user_repository.get_user_by_email(email)
 
         if not user or not self.__verify_password(password, user.password):

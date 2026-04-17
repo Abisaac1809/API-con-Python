@@ -1,3 +1,3 @@
-from .user_repository import UserRepository
+from .sqlalchemy_user_repository import SqlAlchemyUserRepository
 
-__all__ = ["UserRepository"]
+__all__ = ["SqlAlchemyUserRepository"]

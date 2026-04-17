@@ -1,33 +1,26 @@
-import sqlite3
-from errors.server_errors import DatabaseConnectionError
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from dotenv import load_dotenv
 
-DB_PATH = "db.sqlite3"
+load_dotenv()
 
-_CREATE_TABLES_STATEMENT = """
-    CREATE TABLE IF NOT EXISTS users (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
-        name       TEXT    NOT NULL,
-        email      TEXT    NOT NULL UNIQUE,
-        phone      TEXT    NOT NULL UNIQUE,
-        password   TEXT    NOT NULL,
-        created_at TEXT    NOT NULL,
-        updated_at TEXT    NOT NULL
-    )
-    """
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is not set")
+
+engine = create_engine(DATABASE_URL)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def get_connection() -> sqlite3.Connection:
+class Base(DeclarativeBase):
+    pass
+
+
+def get_db():
+    db = SessionLocal()
     try:
-        connection = sqlite3.connect(DB_PATH)
-        connection.row_factory = sqlite3.Row
-        return connection
-    except sqlite3.Error:
-        raise DatabaseConnectionError()
-
-
-def init_db() -> None:
-    try:
-        with get_connection() as connection:
-            connection.execute(_CREATE_TABLES_STATEMENT)
-    except sqlite3.Error:
-        raise DatabaseConnectionError()
+        yield db
+    finally:
+        db.close()

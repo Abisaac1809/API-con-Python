@@ -1,4 +1,3 @@
-from .user import User, UserInDb
-from .auth import LoginRequest, TokenResponse
+from .user import User
 
-__all__ = ["user", "auth"]
+__all__ = ["User"]
